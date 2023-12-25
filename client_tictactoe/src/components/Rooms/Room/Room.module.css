@@ -1,0 +1,23 @@
+.container{
+    display: flex;
+    width: 550px;
+    height: 50px;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px;
+
+}
+
+.roomId{
+    text-align: center;
+    padding: 2px;
+    width: 400px;
+}
+
+.btn{
+    background-color: rgb(44, 50, 164);
+    color: white;
+    border-radius: 3px;
+    padding: 5px;
+    font-weight: 600;
+}

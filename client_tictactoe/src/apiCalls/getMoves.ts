@@ -1,0 +1,1 @@
+// export const getMove(pieceId: number)

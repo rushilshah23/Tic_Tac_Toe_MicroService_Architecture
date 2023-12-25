@@ -1,0 +1,162 @@
+import { socketGameAPI } from "@/apiCalls/socket";
+import { SOCKET_CLIENT_EVENTS, SOCKET_CONSTANTS } from "@/configs/socket.config";
+import { SocketData } from "@/types/SocketData.Interface";
+import { UserMove } from "@/types/UserMove.Interface";
+import { WebSocketExt } from "@/types/WebSocketExt";
+
+class SocketService {
+
+    private  socketConnection: WebSocketExt | null;
+    private connectionOpened:boolean;
+
+    private constructor() {
+        this.socketConnection = null;
+        this.connectionOpened = false;
+    }
+
+    public static getSocketObject = () => {
+        const obj = new SocketService();
+        return obj;
+    }
+
+    public connect = (url: string) => {
+        console.log("connection fired ...")
+        if (!this.socketConnection) {
+            try {
+                this.socketConnection = new WebSocket(url)
+                this.socketConnection.addEventListener("open", () => {
+                    this.connectionOpened = true;
+                    this.startHeartbeat()   
+                })
+                this.socketConnection.addEventListener("close", () => {
+                    console.log("Socket Connection closed ")
+
+                })
+                this.socketConnection.addEventListener("message", (mssg: MessageEvent<string>) => {
+                    const isBin = this.isBinary(mssg);
+                    console.log("Message is Binary ", isBin)
+                    if (isBin) {
+                    } else {
+                        console.log("Normal Message ", mssg)
+                    }
+                    this.startHeartbeat()
+                })
+            } catch (error) {
+                throw Error("Failed to init socket in Socket Service ")
+            }
+        }
+        // else{
+        //     this.socketConnection.close();
+        //     this.socketConnection = null;
+        //     this.connect(url)
+        // }
+    }
+
+
+
+
+    private startHeartbeat = () => {
+
+        const HEARTBEAT_TIMEOUT = SOCKET_CONSTANTS.HEARTBEAT_TIMEOUT; // 5 seconds
+        const HEARTBEAT_VALUE = SOCKET_CONSTANTS.HEARTBEAT_VALUE;
+        if (!this.socketConnection) {
+            return;
+        }
+        if (!!this.socketConnection.pingTimeout) {
+            clearTimeout(this.socketConnection.pingTimeout);
+        }
+
+        if (!!this.socketConnection) {
+            this.socketConnection.pingTimeout = setTimeout(() => {
+                this.socketConnection?.close();
+                // Business logic to reconnect or not
+            }, HEARTBEAT_TIMEOUT);
+
+            const data = new Uint8Array(1);
+            data[0] = HEARTBEAT_VALUE;
+            this.socketConnection.send(data);
+            console.log("Heart beated");
+        }
+
+    };
+
+
+    private isBinary = (obj: any) => {
+        // console.log("typeof obj ",typeof obj)
+
+        //   console.log(" Object.prototype.toString.call(obj) === [object Blob]",Object.prototype.toString.call(obj))
+        return (
+            typeof obj === "object" &&
+            Object.prototype.toString.call(obj) === "[object Blob]"
+        );
+    }
+
+
+    public joinRoom = (roomId: string) => {
+        console.log("Joining Room ... ")
+        if (this.socketConnection) {
+
+            this.sendData( SOCKET_CLIENT_EVENTS.JOIN_ROOM, { roomId: roomId })
+
+        }
+    }
+
+
+
+
+    public  sendData =  (eventType: SOCKET_CLIENT_EVENTS , data: any) => {
+        try {
+          if (this.socketConnection && this.connectionOpened) {
+            // Create a message object with an event type and data
+            console.log("herr 1")
+            const message:SocketData<SOCKET_CLIENT_EVENTS> = {
+              eventType: eventType,
+              data: data,
+            };
+            console.log("herr 2")
+            // Send the message to the server
+            this.socketConnection.send(JSON.stringify(message));
+             console.log("Data sent from Socket API Function")
+          } else {
+            console.log("WebSocket connection is not open or socket Object is null.");
+          }
+        } catch (error) {
+          console.log("Failed to send data",error);
+        }
+      };
+
+    public leaveRoom = (romId: string) => {
+        if (this.socketConnection) {
+
+            if (this.socketConnection.pingTimeout) {
+                clearTimeout(this.socketConnection.pingTimeout);
+
+            }
+             socketGameAPI.sendData(this.socketConnection, SOCKET_CLIENT_EVENTS.LEAVE_ROOM, { romId: romId })
+            this.socketConnection.close();
+        }
+    }
+
+    public isAlive = () => {
+        console.log("Check alive status ", this.socketConnection?.readyState === WebSocket.OPEN)
+        if (this.socketConnection?.readyState === WebSocket.OPEN) {
+            return true
+        } else {
+            return false
+        }
+    }
+
+    public sendMove  = (userMove:UserMove) =>{
+        if(this.socketConnection){
+
+            socketGameAPI.sendData(this.socketConnection,SOCKET_CLIENT_EVENTS.PLAY_MOVE,userMove);
+        }else{
+            throw Error("Nos ocket connection so can't send player move ")
+        }
+    }
+}
+
+
+const socketInstance = SocketService.getSocketObject();
+
+export {socketInstance}

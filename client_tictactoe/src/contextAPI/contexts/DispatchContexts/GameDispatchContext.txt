@@ -1,0 +1,33 @@
+"use client";
+import { UserMove } from "@/types/UserMove.Interface";
+import { UserPublicInterface } from "@/types/UserPublic.Interface";
+import { createContext, useContext } from "react";
+
+export enum GameActionTypes  {
+  
+    PLAY_MOVE = "PLAY_MOVE",
+
+
+}
+
+interface GameActionPayloads {
+
+    [GameActionTypes.PLAY_MOVE] :UserMove
+  }
+  
+export type GameAction =  {
+    type: GameActionTypes,
+    payload:GameActionPayloads[GameActionTypes]
+}
+
+export const GameDispatchContext = createContext<((action: GameAction) => void) | null>(null);
+
+
+export const useGameDispatchContext = () =>{
+    const context = useContext(GameDispatchContext);
+    if(!context){
+        throw Error("Game Dispatch Context not defined")
+    }
+    return context;
+}
+

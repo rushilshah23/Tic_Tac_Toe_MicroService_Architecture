@@ -1,0 +1,44 @@
+"use client";
+import { FC, useReducer } from "react";
+import {
+  SocketGameContext,
+  initSocketGameState,
+} from "../contexts/StateContexts/SocketGameContext";
+import { socketGameReducer } from "../reducers/socketGameReducer";
+import {
+  SocketGameDispatchContext,
+  // SocketGameDispatchContextAsync,
+  // useSocketGameDispatchAsync,
+} from "../contexts/DispatchContexts/SocketGameDispatchContext";
+
+interface SocketGameProviderProps {
+  children: React.ReactNode;
+  // url:string
+}
+
+const SocketGameProvider: FC<SocketGameProviderProps> = ({ children }) => {
+  const [socketGameState, socketGameDispatch] = useReducer(
+    socketGameReducer,
+    initSocketGameState
+  );
+  // const socketGameDispatchAsync = useSocketGameDispatchAsync();
+
+  return ( 
+    <SocketGameContext.Provider
+      value={{
+        socket: socketGameState.socket,
+        roomId: socketGameState.roomId,
+      }}
+    >
+      <SocketGameDispatchContext.Provider value={socketGameDispatch}>
+        {/* <SocketGameDispatchContextAsync.Provider
+          value={socketGameDispatchAsync}
+        > */}
+          {children}
+        {/* </SocketGameDispatchContextAsync.Provider> */}
+      </SocketGameDispatchContext.Provider>
+    </SocketGameContext.Provider>
+  );
+};
+
+export default SocketGameProvider;

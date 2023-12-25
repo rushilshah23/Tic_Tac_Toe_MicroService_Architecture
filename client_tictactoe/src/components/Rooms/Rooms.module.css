@@ -1,0 +1,72 @@
+.container{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.leftContainer{
+    height: 80vh;
+    /* width: 50%; */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+
+.roomContainer{
+    /* width: 50%; */
+    height: 700px;
+    overflow-y: scroll;
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+    margin: 20px 20px;
+
+}
+
+.roomContainer::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+}
+
+
+.emailIdContainer{
+    background-color: rgb(49, 33, 33);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    height: 50px;
+}
+
+.emailId{
+    color: rgb(255, 255, 255);
+    font-weight: 500;
+    text-align: center;
+    flex: 4;
+}
+
+.rightContainer{
+    /* width: 30%; */
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.createRoomContainer{
+    width: 400px;
+}
+
+.joinRoomContainer{
+    width: 400px;
+
+}
+
+.logoutBtn{
+    color: white;
+    flex: 1;
+    background-color: rgb(128, 108, 108);
+    border-radius: 2px;
+    max-width: 100px;
+}

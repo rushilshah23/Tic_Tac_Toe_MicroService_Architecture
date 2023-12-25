@@ -1,0 +1,16 @@
+// import { GameAction, GameActionTypes } from "../contexts/DispatchContexts/GameDispatchContext";
+// import { GameStateInterface } from "../contexts/StateContexts/GameContext";
+
+
+// export function gameReducer(state:GameStateInterface,action:GameAction){
+//     switch(action.type){
+
+//         case GameActionTypes.PLAY_MOVE:
+//             if(action.payload instanceof Object && "selectedCell" in action.payload && "roomnId" in action.payload){
+                
+//             }
+            
+    
+//     }
+        
+// }

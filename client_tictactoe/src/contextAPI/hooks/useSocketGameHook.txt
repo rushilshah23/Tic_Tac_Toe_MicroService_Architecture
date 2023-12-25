@@ -1,0 +1,276 @@
+"use client";
+
+import { ENV_VAR } from "@/configs/env.config";
+import { useSocketGameContext } from "../contexts/StateContexts/SocketGameContext";
+import {
+  SocketGameAction,
+  SocketGameActionAsync,
+  SocketGameActionTypes,
+  SocketGameActionTypesAsync,
+  useSocketGameDispatch,
+  // useSocketGameDispatchAsync,
+} from "../contexts/DispatchContexts/SocketGameDispatchContext";
+import {
+  SOCKET_CLIENT_EVENTS,
+  SOCKET_CONSTANTS,
+} from "@/configs/socket.config";
+import { WebSocketExt } from "@/types/WebSocketExt";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { socketGameAPI } from "@/apiCalls/socket";
+import { socketGameDispatchAsync } from "../reducers/socketGameReducer";
+import { UserMove } from "@/types/UserMove.Interface";
+
+export const useSocketGameHook = () => {
+  const [hookInitialized, setHookInitialized] = useState<null | boolean>(null);
+  const socketGameContext = useSocketGameContext();
+  const socketGameDispatch = useSocketGameDispatch();
+  const renderRef1 = useRef(0);
+  const renderRef2 = useRef(0);
+
+  // const socketGameDispatchAsync = useSocketGameDispatchAsync();
+
+
+
+// UTIL FUNCTIONS FOR SOCKET
+
+
+
+
+const startHeartbeat = () => {
+  // console.log("Heartbeat function invoked !");
+  const HEARTBEAT_TIMEOUT = SOCKET_CONSTANTS.HEARTBEAT_TIMEOUT; // 5 seconds
+  const HEARTBEAT_VALUE = SOCKET_CONSTANTS.HEARTBEAT_VALUE;
+  if (!socketGameContext.socket) {
+    return;
+  }
+  if (!!socketGameContext.socket.pingTimeout) {
+    clearTimeout(socketGameContext.socket.pingTimeout);
+  }
+
+  socketGameContext.socket.pingTimeout = setTimeout(() => {
+    socketGameContext.socket?.close();
+    // Business logic to reconnect or not
+  }, HEARTBEAT_TIMEOUT);
+
+  const data = new Uint8Array(1);
+  data[0] = HEARTBEAT_VALUE;
+  socketGameContext.socket.send(data);
+  console.log("Heart beated");
+};
+
+function isBinary(obj: any) {
+  return (
+    typeof obj === "object" &&
+    Object.prototype.toString.call(obj) === "[object Blob]"
+  );
+}
+
+// socketGameDispatchAsync({
+//   type:SocketGameActionTypesAsync.PLAY_MOVE,
+//   payload:
+// })
+const joinRoom = (roomId: string) => {
+  if (
+    !!socketGameContext.socket &&
+    socketGameContext.socket.readyState === WebSocket.OPEN
+  ) {
+    const { socket } = socketGameContext;
+    socketGameAPI.sendData(socket, SOCKET_CLIENT_EVENTS.JOIN_ROOM, {
+      roomId,
+    });
+    socketGameDispatch({
+      payload: { roomId: roomId },
+      type: SocketGameActionTypes.JOIN_ROOM,
+    });
+    console.log("AFTER JOINING ROOM ", socketGameContext);
+  }
+};
+
+const leaveRoom =
+  // useCallback(
+  () => {
+    if (
+      !!socketGameContext.socket &&
+      socketGameContext.socket.readyState === WebSocket.OPEN
+    ) {
+      if (socketGameContext.roomId) {
+        socketGameDispatch({
+          payload: { roomId: socketGameContext.roomId },
+          type: SocketGameActionTypes.LEAVE_ROOM,
+        });
+        const roomId = socketGameContext.roomId;
+        socketGameAPI.sendData(socketGameContext.socket, SOCKET_CLIENT_EVENTS.LEAVE_ROOM, {
+          roomId
+        });
+        console.log("AFTER LEAVING ROOM ", socketGameContext);
+      } else {
+        socketGameDispatch({
+          payload: {},
+          type: SocketGameActionTypes.NULL_SOCKET,
+        });
+      }
+    }
+  };
+
+const sendMove = async (data: UserMove) => {
+  await socketGameDispatchAsync(socketGameContext, {
+    type: SocketGameActionTypesAsync.PLAY_MOVE,
+    payload: {
+      roomId: data.roomId,
+      selectedCell: data.selectedCell,
+    },
+  }).then(() => {
+    console.log("Data sent from send Move hook util function ");
+  });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+  useEffect(() => {
+    let subscribed = true;
+    if (subscribed && !socketGameContext.socket) {
+      const newSocket = new WebSocket(
+        ENV_VAR.SOCKET_PROXY_GATEWAY_URL + ENV_VAR.SOCKET_EXT
+      );
+      console.log("New websocket connection created in Hook");
+      newSocket.onopen = ()=>{
+
+        if (newSocket.readyState === WebSocket.OPEN) {
+          socketGameDispatch({
+          payload: {
+            socketConnection: newSocket,
+            // url: ENV_VAR.SOCKET_PROXY_GATEWAY_URL + ENV_VAR.SOCKET_EXT,
+          },
+          type: SocketGameActionTypes.INIT_SOCKET,
+        });
+      
+        setHookInitialized(true);
+
+        renderRef1.current = renderRef1.current + 1;
+
+        console.log(
+          "Rendered useSocketHook  useEffect ",
+          renderRef1.current,
+          " times and SOCKET INITILIZED "
+          );
+      } else {
+        console.log("Faild to crate connection to the socket ")
+        socketGameDispatch({
+          type: SocketGameActionTypes.NULL_SOCKET,
+          payload: {},
+        });
+        setHookInitialized(false);
+      }
+    }
+      
+    }
+    
+    return () => {
+      if (socketGameContext.socket) {
+  
+
+        // Close socket connection
+        // if (socketConnection ) {
+          socketGameContext.socket?.close();
+          socketGameDispatch({
+            type: SocketGameActionTypes.NULL_SOCKET,
+            payload: {},
+          });
+          setHookInitialized(false);
+          subscribed = false;
+          console.log("CONNECTION CLOSED !");
+        };
+      }
+    // }, [socketGameContext.socket, socketGameContext.roomId]);
+  },[])
+
+
+
+
+
+  // useEffect(() => {
+  //   let subscribed = true;
+            
+  //   const openHandler = () => {
+  //     console.log(
+  //       "Heartbeat started"
+  //       );
+  //       startHeartbeat();
+  //     };
+  //     const closeHandler = () => {
+  //       console.log("WebSocket connection closed - from InitFunction");
+  //     if (socketGameContext.socket?.pingTimeout) {
+  //       clearTimeout(socketGameContext.socket.pingTimeout);
+  //     }
+  //     leaveRoom();
+  //   };
+  //   const messageHandler = (msg: MessageEvent<string>) => {
+  //     if (isBinary(msg.data)) {
+  //       startHeartbeat();
+  //     } else {
+  //       console.log(`Received Non Binary message: ${msg.data}`);
+  //     }
+  //   };
+  //   // if (!!socketGameContext.socket) {
+  //     if (!!socketGameContext.socket && socketGameContext.socket.readyState === WebSocket.OPEN && hookInitialized === true && subscribed === true) {
+  //       socketGameContext.socket.onopen = () => {
+  //         if (!!socketGameContext.socket) {
+
+            
+  //           if (subscribed && hookInitialized) {
+  //             socketGameContext.socket.addEventListener("open", openHandler);
+  //             socketGameContext.socket.addEventListener("close", closeHandler);
+  //             socketGameContext.socket.addEventListener("message", messageHandler);
+
+  //           renderRef2.current = renderRef2.current + 1;
+  //           console.log(
+  //             "Rendered useSocketUtilHook useEffect ",
+  //             renderRef2.current,
+  //             " times and EVENT LISTINERS ADDED"
+  //           );
+
+
+  //         } else {
+  //           console.log("Socket is still not intiialized in child socket hook ");
+  //         }
+  //       };
+  //     }
+  //   }
+  //   // }, [startHeartbeat]);
+  // // }, [socketGameContext]);
+
+  // return () => {
+  //   // Clear heartbeat timeout
+  //   if (socketGameContext.socket && socketGameContext.socket.pingTimeout) {
+  //     clearTimeout(socketGameContext.socket.pingTimeout);
+  //     console.log("PING TIMEOUT CLEARED ")
+      
+  //     // Close socket connection
+  //   }
+
+  //     socketGameContext.socket?.removeEventListener("open", openHandler);
+  //     socketGameContext.socket?.removeEventListener("close", closeHandler);
+  //     socketGameContext.socket?.removeEventListener("message", messageHandler);
+  //     subscribed = false;
+
+  //     console.log("EVENT LISTNERES REMOVED ")
+  //     // if (socketConnection ) {
+  //       // leaveRoom()
+  //       // socketGameContext.socket?.close();
+  //       // console.log("CONNECTION CLOSED !")
+  //   // }
+  // };
+  // },[])
+
+  return { sendMove, leaveRoom, joinRoom, socketGameContext };
+
+};
